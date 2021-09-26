@@ -17,7 +17,7 @@ def main():
     clock = Clock(screen)
     going = True
     while going:
-        pg_clock.tick(10)  # 1 time a second
+        pg_clock.tick(60)  # 60 times a second
         screen.fill(BACKGOUND_COLOR)
         clock.update()
         pg.display.flip()
