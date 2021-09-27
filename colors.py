@@ -1,5 +1,6 @@
 from pygame import Color
 
+
 BLACK = Color(35, 35, 35)
 WHITE = Color(255, 255, 255)
 BLUE = Color(0, 0, 255)
