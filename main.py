@@ -1,4 +1,4 @@
-import pygame as pg
+import pygame
 
 from clock import Clock
 from colors import BLACK
@@ -8,10 +8,10 @@ BACKGOUND_COLOR = BLACK
 
 
 def main():
-    pg.init()
-    screen = pg.display.set_mode((600, 600))
-    pg.display.set_caption('Clock')
-    pg_clock = pg.time.Clock()
+    pygame.init()
+    screen = pygame.display.set_mode((600, 600))
+    pygame.display.set_caption('Clock')
+    pg_clock = pygame.time.Clock()
 
     # Main Loop
     clock = Clock(screen)
@@ -20,16 +20,16 @@ def main():
         pg_clock.tick(60)  # 60 times a second
         screen.fill(BACKGOUND_COLOR)
         clock.update()
-        pg.display.flip()
+        pygame.display.flip()
 
         # Handle Input Events
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 going = False
-            elif event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 going = False
 
-    pg.quit()
+    pygame.quit()
 
 
 if __name__ == '__main__':
