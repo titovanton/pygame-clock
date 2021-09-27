@@ -1,8 +1,7 @@
 import math
+from collections import namedtuple
 from datetime import datetime
 from decimal import Decimal
-
-from collections import namedtuple
 
 import pygame as pg
 
@@ -15,6 +14,7 @@ Point = namedtuple(
     ['x', 'y'],
     defaults=[0, 0]
 )
+
 
 FacePoint = namedtuple(
     'FacePoint',
@@ -36,15 +36,6 @@ class Clock:
         width = Decimal(surface.get_width())
         height = Decimal(surface.get_height())
         self.radius = (width - self.padding * 2) / 2
-
-        # arrow lengths
-        self.min_arrow = self.radius * 9 / 10
-        self.sec_arrow = self.radius * 8 / 10
-        self.hour_arrow = self.radius * 3 / 5
-
-        self.min_start_point = Point(width / 2, self.padding + self.radius / 10)
-        self.sec_start_point = Point(width / 2, self.padding + 2 * self.radius / 10)
-        self.hour_start_point = Point(width / 2, self.padding + 2 * self.radius / 5)
         self.middle = Point(width / 2, height / 2)
         self.start_point = Point(width / 2, self.padding)  # 12:00
 
@@ -97,8 +88,24 @@ class Clock:
         return Point(x2, y2)
 
     def _draw_min_arrow(self, now):
-        angle = self._get_min_angle(now.minute, now.second)
-        end_pos = self._calc_point(self.min_arrow, self.min_start_point, angle)
+        min_arrow = self.radius * 9 / 10
+        min_start_point = Point(
+            Decimal(self.surface.get_width()) / 2,
+            self.padding + self.radius / 10
+        )
+        minute = now.minute
+
+        # harcoded to make arrows look better
+        if minute == 15:
+            end_pos = Point(self.middle.x + min_arrow, self.middle.y)
+        elif minute == 30:
+            end_pos = Point(self.middle.x, self.middle.y + min_arrow)
+        elif minute == 45:
+            end_pos = Point(self.middle.x - min_arrow, self.middle.y)
+        else:
+            angle = self._get_min_angle(minute, now.second)
+            end_pos = self._calc_point(min_arrow, min_start_point, angle)
+
         pg.draw.line(
             self.surface,
             self.color,
@@ -108,8 +115,24 @@ class Clock:
         )
 
     def _draw_hour_arrow(self, now):
-        angle = self._get_hour_angle(now.hour, now.minute)
-        end_pos = self._calc_point(self.hour_arrow, self.hour_start_point, angle)
+        hour_arrow = self.radius * 3 / 5
+        hour_start_point = Point(
+            Decimal(self.surface.get_width()) / 2,
+            self.padding + 2 * self.radius / 5
+        )
+        hour = now.hour
+
+        # harcoded to make arrows look better
+        if hour == 3:
+            end_pos = Point(self.middle.x + hour_arrow, self.middle.y)
+        elif hour == 6:
+            end_pos = Point(self.middle.x, self.middle.y + hour_arrow)
+        elif hour == 9:
+            end_pos = Point(self.middle.x - hour_arrow, self.middle.y)
+        else:
+            angle = self._get_hour_angle(hour, now.minute)
+            end_pos = self._calc_point(hour_arrow, hour_start_point, angle)
+
         pg.draw.line(
             self.surface,
             self.color,
@@ -119,8 +142,24 @@ class Clock:
         )
 
     def _draw_sec_arrow(self, now):
-        angle = self._get_min_angle(now.second)
-        end_pos = self._calc_point(self.sec_arrow, self.sec_start_point, angle)
+        sec_arrow = self.radius * 8 / 10
+        sec_start_point = Point(
+            Decimal(self.surface.get_width()) / 2,
+            self.padding + 2 * self.radius / 10
+        )
+        second = now.second
+
+        # harcoded to make arrows look better
+        if second == 15:
+            end_pos = Point(self.middle.x + sec_arrow, self.middle.y)
+        elif second == 30:
+            end_pos = Point(self.middle.x, self.middle.y + sec_arrow)
+        elif second == 45:
+            end_pos = Point(self.middle.x - sec_arrow, self.middle.y)
+        else:
+            angle = self._get_min_angle(second)
+            end_pos = self._calc_point(sec_arrow, sec_start_point, angle)
+
         pg.draw.line(
             self.surface,
             self.color,
