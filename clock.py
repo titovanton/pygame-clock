@@ -1,9 +1,9 @@
 import math
-import enum
 from collections import namedtuple
 from datetime import datetime
 from decimal import Decimal
 
+import numpy as np
 import pygame
 import pygame.gfxdraw
 
@@ -25,30 +25,47 @@ FacePoint = namedtuple(
 )
 
 
-class ArrowType(enum.Enum):
-    SECOND = '1'
-    MINUTE = '2'
-    HOUR = '3'
-
-
 class ArrowBase:
-    len_k = 1
-    skin_angles = {
-        ArrowType.SECOND: Decimal(math.pi / 2),
-        ArrowType.MINUTE: Decimal(math.pi / 6),
-        ArrowType.HOUR: Decimal(math.pi / 4),
-    }
+    """
+    Rotation we gonna implement via coordinate system transformation, to use one formula x = f(x0,y0) for any x.
+    We declare 3 coordinate systems: XOY, X1O1Y1, X2O2Y2 == S, S1, S2
+    S - is the regular graphic system, where O at the left top corner, X goes to the right, Y goes to the bottom.
+    S1 - rotated and shifted system, so O in the center of the clock, Y goes the same direction(always) as the given
+    arrow, X goes to the 3:00 on the clock.
+    S2 - everything the same as in S1, but X and Y are rotated on angle alpha with the arrow on relation to S1(and S).
+    So, when alpha == 0 -> S2 == S1.
+    This way we alwyas have same coordinates for arrows in S2, so we need transofm coordinates from S2 -> S1 -> S
+    """
+
     color = SILVER
+
+    # arrow_len = radius * len_k
+    len_k = 1
 
     def __init__(self, surface, radius, center):
         self.surface = surface
         self.radius = radius
-        self.center = center
-        self.start_point = Point(center.x, center.y - self.len)
+        self.center = center  # in S
+        self.start_point = Point(0, self.len)  # in S2
 
-    @property
-    def skin_angle(self):
-        return self.skin_angles[self.type]
+    def get_matrix_s2_to_s1(self, angle):
+        return np.float32([
+            [np.cos(-angle), -np.sin(-angle), 0],
+            [np.sin(-angle), np.cos(-angle), 0]
+        ])
+
+    def get_matrix_s1_to_s(self):
+        return np.float32([
+            [1, 0, self.center.x],
+            [0, -1, self.center.y]
+        ])
+
+    def transform_point(self, point, angle):
+        point_vector = np.float32([point.x, point.y, 1])
+        point_vector = self.get_matrix_s2_to_s1(angle).dot(point_vector)
+        point_vector = np.append(point_vector, np.float32([1]))
+        point_vector = self.get_matrix_s1_to_s().dot(point_vector)
+        return Point(math.ceil(point_vector[0]), math.ceil(point_vector[1]))
 
     @property
     def len(self):
@@ -57,12 +74,14 @@ class ArrowBase:
     def update(self):
         raise NotImplementedError()
 
-    def calc_arrowhead(self, angle):
-        x0 = self.start_point.x
-        y0 = self.start_point.y
-        x = math.ceil(x0 + Decimal(math.sin(angle)) * self.len)
-        y = math.ceil(y0 + self.len * Decimal(1 - math.cos(angle)))
-        return Point(x, y)
+    def _update(self, angle):
+        current_pos = self.transform_point(self.start_point, angle)
+        pygame.draw.aaline(
+            self.surface,
+            self.color,
+            self.center,
+            current_pos,
+        )
 
 
 class MinuteAngleMixin:
@@ -71,103 +90,91 @@ class MinuteAngleMixin:
             raise ValueError(error_text)
         if second > 59 or second < 0:
             raise ValueError('Must be True: 0 <= second <= 59')
-        return minute * Decimal(math.pi / 30) + second * Decimal(math.pi / 1800)
+        return minute * np.radians(360 / 60) + second * np.radians(360 / (60 * 60))
 
 
 class MinuteArrow(MinuteAngleMixin, ArrowBase):
-    len_k = Decimal(9 / 10)
-
-    def __init__(self, surface, radius, center):
-        super().__init__(surface, radius, center)
-        self.type = ArrowType.MINUTE
+    len_k = Decimal(93 / 100)
 
     def update(self, dtime):
         minute = dtime.minute
         second = dtime.second
-
-        # harcoded to make arrows look better
-        if minute == 15 and second == 0:
-            current_pos = Point(self.center.x + self.len, self.center.y)
-        elif minute == 30 and second == 0:
-            current_pos = Point(self.center.x, self.center.y + self.len)
-        elif minute == 45 and second == 0:
-            current_pos = Point(self.center.x - self.len, self.center.y)
-        else:
-            angle = self.get_angle(minute, second)
-            current_pos = self.calc_arrowhead(angle)
-
-        pygame.draw.aaline(
-            self.surface,
-            self.color,
-            self.center,
-            current_pos,
-        )
+        angle = self.get_angle(minute, second)
+        self._update(angle)
 
 
 class SecondArrow(MinuteAngleMixin, ArrowBase):
-    len_k = Decimal(8 / 10)
-
-    def __init__(self, surface, radius, center):
-        super().__init__(surface, radius, center)
-        self.type = ArrowType.SECOND
+    len_k = Decimal(9 / 10)
 
     def update(self, dtime):
         second = dtime.second
-
-        # harcoded to make arrows look better
-        if second == 15:
-            current_pos = Point(self.center.x + self.len, self.center.y)
-        elif second == 30:
-            current_pos = Point(self.center.x, self.center.y + self.len)
-        elif second == 45:
-            current_pos = Point(self.center.x - self.len, self.center.y)
-        else:
-            angle = self.get_angle(second, error_text='Must be True: 0 <= second <= 59')
-            current_pos = self.calc_arrowhead(angle)
-
-        pygame.draw.aaline(
-            self.surface,
-            self.color,
-            self.center,
-            current_pos,
-        )
+        angle = self.get_angle(second, error_text='Must be True: 0 <= second <= 59')
+        self._update(angle)
 
 
-class HourArrow(MinuteAngleMixin, ArrowBase):
+class HourArrow(ArrowBase):
     len_k = Decimal(3 / 5)
-
-    def __init__(self, surface, radius, center):
-        super().__init__(surface, radius, center)
-        self.type = ArrowType.HOUR
 
     def update(self, dtime):
         hour = dtime.hour
         minute = dtime.minute
+        angle = self.get_angle(hour, minute)
+        self._update(angle)
 
-        # harcoded to make arrows look better
-        if hour == 3 and minute == 0:
-            current_pos = Point(self.center.x + self.len, self.center.y)
-        elif hour == 6 and minute == 0:
-            current_pos = Point(self.center.x, self.center.y + self.len)
-        elif hour == 9 and minute == 0:
-            current_pos = Point(self.center.x - self.len, self.center.y)
-        else:
-            angle = self.get_angle(hour, minute)
-            current_pos = self.calc_arrowhead(angle)
+    def get_angle(self, hour, minute=0):
+        if minute > 59 or minute < 0:
+            raise ValueError('Must be True: 0 <= minute <= 59')
+        if hour > 23 or hour < 0:
+            raise ValueError('Must be True: 0 <= second <= 23')
+        if hour > 11:
+            hour = hour - 12
+        return hour * np.radians(360 / 12) + minute * np.radians(360 / (60 * 12))
 
-        pygame.draw.aaline(
+
+class PolygonArrowMixin:
+    thickness = 3
+
+    def __init__(self, surface, radius, center):
+        super().__init__(surface, radius, center)
+
+        # all coordinates are in S2
+        self.start_left_top = Point(int(-self.thickness / 2), self.len)
+        self.start_right_top = Point(int(self.thickness / 2), self.len)
+        self.start_right_bottom = Point(int(self.thickness / 2), 0)
+        self.start_left_bottom = Point(int(-self.thickness / 2), 0)
+
+    def _update(self, angle):
+        cur_left_top = self.transform_point(self.start_left_top, angle)
+        cur_right_top = self.transform_point(self.start_right_top, angle)
+        cur_right_bottom = self.transform_point(self.start_right_bottom, angle)
+        cur_left_bottom = self.transform_point(self.start_left_bottom, angle)
+
+        pygame.gfxdraw.filled_polygon(
             self.surface,
+            [cur_left_top, cur_right_top, cur_right_bottom, cur_left_bottom],
             self.color,
-            self.center,
-            current_pos,
         )
+
+        pygame.gfxdraw.aapolygon(
+            self.surface,
+            [cur_left_top, cur_right_top, cur_right_bottom, cur_left_bottom],
+            self.color,
+        )
+
+
+class PolygonHourArrow(PolygonArrowMixin, HourArrow):
+    thickness = 10
+
+
+class PolygonMinuteArrow(PolygonArrowMixin, MinuteArrow):
+    thickness = 4
 
 
 class Clock:
     padding = 20
     division_rect = (5, 25)
     face_points = []
-    hour_point_radius = 8
+    hour_point_radius = 9
     min_point_radius = 4
     color = SILVER
 
@@ -181,8 +188,8 @@ class Clock:
 
         # arrows
         self.second_arrow = SecondArrow(surface, self.radius, self.center)
-        self.minute_arrow = MinuteArrow(surface, self.radius, self.center)
-        self.hour_arrow = HourArrow(surface, self.radius, self.center)
+        self.minute_arrow = PolygonMinuteArrow(surface, self.radius, self.center)
+        self.hour_arrow = PolygonHourArrow(surface, self.radius, self.center)
 
         # generate face_points for hours and minutes
         self.face_points = [FacePoint(
@@ -204,12 +211,19 @@ class Clock:
 
     def draw_face(self, points):
         for point in points:
+            pygame.gfxdraw.filled_circle(
+                self.surface,
+                int(point.x),
+                int(point.y),
+                int(point.radius),
+                self.color
+            )
             pygame.gfxdraw.aacircle(
                 self.surface,
                 int(point.x),
                 int(point.y),
                 int(point.radius),
-                self.color,
+                self.color
             )
 
     def calc_point(self, radius, start_point, angle):
