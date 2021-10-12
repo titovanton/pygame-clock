@@ -6,11 +6,11 @@ from decimal import Decimal
 import numpy as np
 import pygame
 import pygame.gfxdraw
+from pytz import timezone
 
-from colors import WHITE, SILVER
+from enums import MyColor
+from settings import SETTINGS
 
-
-CLOCK_COLOR = WHITE
 
 Point = namedtuple(
     'Point',
@@ -21,7 +21,7 @@ Point = namedtuple(
 FacePoint = namedtuple(
     'FacePoint',
     ['x', 'y', 'radius', 'color'],
-    defaults=[0, 0, 0, WHITE]
+    defaults=[0, 0, 0, MyColor.WHITE]
 )
 
 
@@ -37,12 +37,11 @@ class ArrowBase:
     This way we alwyas have same coordinates for arrows in S2, so we need transofm coordinates from S2 -> S1 -> S
     """
 
-    color = SILVER
-
     # arrow_len = radius * len_k
     len_k = 1
 
     def __init__(self, surface, radius, center):
+        self.color = SETTINGS['arrows_color'].value
         self.surface = surface
         self.radius = radius
         self.center = center  # in S
@@ -171,15 +170,16 @@ class PolygonMinuteArrow(PolygonArrowMixin, MinuteArrow):
 
 
 class Clock:
-    padding = 20
-    division_rect = (5, 25)
+    padding = SETTINGS['padding']
     face_points = []
-    hour_point_radius = 9
-    min_point_radius = 4
-    color = SILVER
+    hour_point_radius = SETTINGS['hour_point_radius']
+    min_point_radius = SETTINGS['min_point_radius']
+    surface = None
 
-    def __init__(self, surface):
+    def __init__(self, surface, tz):
+        self.tz = timezone(tz.value)
         self.surface = surface
+        self.color = SETTINGS['color'].value
         width = Decimal(surface.get_width())
         height = Decimal(surface.get_height())
         self.radius = (width - self.padding * 2) / 2
@@ -226,6 +226,12 @@ class Clock:
                 self.color
             )
 
+        # text timezone
+        city = str(self.tz).split('/')[-1]
+        myfont = pygame.font.SysFont(SETTINGS['font_family'], SETTINGS['font_size'])
+        textsurface = myfont.render(city, True, SETTINGS['color'].value)
+        self.surface.blit(textsurface, (self.padding / 2, self.padding))
+
     def calc_point(self, radius, start_point, angle):
         x1 = start_point.x
         y1 = start_point.y
@@ -234,8 +240,9 @@ class Clock:
         return Point(x2, y2)
 
     def update(self):
+        self.surface.fill(SETTINGS['backgound_color'].value)
         self.draw_face(self.face_points)
-        now = datetime.now()
+        now = datetime.now(self.tz)
         self.second_arrow.update(now)
         self.minute_arrow.update(now)
         self.hour_arrow.update(now)
