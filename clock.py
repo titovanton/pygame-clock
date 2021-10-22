@@ -8,15 +8,9 @@ import pygame
 import pygame.gfxdraw
 from pytz import timezone
 
-from enums import MyColor
-from settings import SETTINGS
+from models import MyColor, Point
+from utils import get_clock_size
 
-
-Point = namedtuple(
-    'Point',
-    ['x', 'y'],
-    defaults=[0, 0]
-)
 
 FacePoint = namedtuple(
     'FacePoint',
@@ -40,10 +34,11 @@ class ArrowBase:
     # arrow_len = radius * len_k
     len_k = 1
 
-    def __init__(self, surface, radius, center):
-        self.color = SETTINGS['arrows_color'].value
+    def __init__(self, surface, radius, center, color, thickness=1):
+        self.color = color
         self.surface = surface
         self.radius = radius
+        self.thickness = thickness
         self.center = center  # in S
         self.start_point = Point(0, self.len)  # in S2
 
@@ -133,8 +128,8 @@ class HourArrow(ArrowBase):
 class PolygonArrowMixin:
     thickness = 3
 
-    def __init__(self, surface, radius, center):
-        super().__init__(surface, radius, center)
+    def __init__(self, surface, radius, center, color, thickness):
+        super().__init__(surface, radius, center, color, thickness)
 
         # all coordinates are in S2
         self.start_left_top = Point(int(-self.thickness / 2), self.len)
@@ -170,31 +165,50 @@ class PolygonMinuteArrow(PolygonArrowMixin, MinuteArrow):
 
 
 class Clock:
-    padding = SETTINGS['padding']
-    face_points = []
-    hour_point_radius = SETTINGS['hour_point_radius']
-    min_point_radius = SETTINGS['min_point_radius']
+    settings = None
+    padding = None
     surface = None
+    screen = None
+    radius = None
+    face_points = []
+    hour_point_radius = None
+    min_point_radius = None
 
-    def __init__(self, surface, tz):
-        self.tz = timezone(tz.value)
+    def __init__(self, screen, settings):
+        self.screen = screen
+        self.settings = settings
+        self.radius = Decimal(settings.clock_diameter / 2)
+        self.padding = Decimal(settings.padding)
+        self.hour_point_radius = Decimal(settings.hour_point_radius)
+        self.min_point_radius = Decimal(settings.min_point_radius)
+        self.font_family = settings.font_family
+        self.font_size = settings.font_size
+        self.timezone = timezone(settings.timezone.value)
+        self.coordinates = settings.coordinates
+        self.backgound_color = settings.backgound_color.value
+        self.color = settings.color.value
+
+        surface = pygame.Surface(get_clock_size(settings))
         self.surface = surface
-        self.color = SETTINGS['color'].value
         width = Decimal(surface.get_width())
         height = Decimal(surface.get_height())
-        self.radius = (width - self.padding * 2) / 2
         self.center = Point(width / 2, height / 2)
         self.start_point = Point(width / 2, self.padding)  # 12:00
 
         # arrows
-        self.second_arrow = SecondArrow(surface, self.radius, self.center)
-        self.minute_arrow = PolygonMinuteArrow(surface, self.radius, self.center)
-        self.hour_arrow = PolygonHourArrow(surface, self.radius, self.center)
+        self.second_arrow = SecondArrow(
+            surface, self.radius, self.center, self.color, 1
+        )
+        self.minute_arrow = PolygonMinuteArrow(
+            surface, self.radius, self.center, self.color, settings.minute_thickness
+        )
+        self.hour_arrow = PolygonHourArrow(
+            surface, self.radius, self.center, self.color, settings.hour_thickness
+        )
 
         # generate face_points for hours and minutes
         self.face_points = [FacePoint(
-            self.start_point.x,
-            self.start_point.y,
+            *self.start_point,
             self.hour_point_radius,
             self.color
         )]
@@ -203,14 +217,14 @@ class Clock:
             angle = self.minute_arrow.get_angle(minute)
             radius = self.hour_point_radius if not hour_flag else self.min_point_radius
             point = self.calc_point(self.radius, self.start_point, angle)
-            self.face_points.append(FacePoint(point.x, point.y, radius, self.color))
+            self.face_points.append(FacePoint(*point, radius, self.color))
             if hour_flag == 4:
                 hour_flag = 0
             else:
                 hour_flag += 1
 
-    def draw_face(self, points):
-        for point in points:
+    def draw_face(self, pm=False):
+        for point in self.face_points:
             pygame.gfxdraw.filled_circle(
                 self.surface,
                 int(point.x),
@@ -227,10 +241,19 @@ class Clock:
             )
 
         # text timezone
-        city = str(self.tz).split('/')[-1]
-        myfont = pygame.font.SysFont(SETTINGS['font_family'], SETTINGS['font_size'])
-        textsurface = myfont.render(city, True, SETTINGS['color'].value)
-        self.surface.blit(textsurface, (self.padding / 2, self.padding))
+        city = str(self.timezone).split('/')[-1].replace('_', ' ')
+        myfont = pygame.font.SysFont(self.font_family, self.font_size)
+        textsurface = myfont.render(city, True, self.color)
+        position = Point(self.padding / 2, self.padding)
+        self.surface.blit(textsurface, position)
+
+        # text timezone
+        textsurface = myfont.render('PM' if pm else 'AM', True, self.color)
+        position = Point(
+            int(self.radius * Decimal(1.9)),
+            self.radius * Decimal(1.8)
+        )
+        self.surface.blit(textsurface, position)
 
     def calc_point(self, radius, start_point, angle):
         x1 = start_point.x
@@ -240,9 +263,10 @@ class Clock:
         return Point(x2, y2)
 
     def update(self):
-        self.surface.fill(SETTINGS['backgound_color'].value)
-        self.draw_face(self.face_points)
-        now = datetime.now(self.tz)
+        self.surface.fill(self.backgound_color)
+        now = datetime.now(self.timezone)
+        self.draw_face(now.hour > 11)
         self.second_arrow.update(now)
         self.minute_arrow.update(now)
         self.hour_arrow.update(now)
+        self.screen.blit(self.surface, self.coordinates)

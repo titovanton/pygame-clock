@@ -1,6 +1,24 @@
 import enum
+from collections import namedtuple
 
 from pygame import Color
+
+
+Point = namedtuple(
+    'Point',
+    ['x', 'y'],
+    defaults=[0, 0]
+)
+Size = namedtuple(
+    'Size',
+    ['width', 'height'],
+    defaults=[0, 0]
+)
+
+
+class Dict2Obj:
+    def __init__(self, entries):
+        self.__dict__.update(entries)
 
 
 class MyColor(enum.Enum):
