@@ -165,7 +165,6 @@ class PolygonMinuteArrow(PolygonArrowMixin, MinuteArrow):
 
 
 class Clock:
-    settings = None
     padding = None
     surface = None
     screen = None
@@ -176,7 +175,6 @@ class Clock:
 
     def __init__(self, screen, settings):
         self.screen = screen
-        self.settings = settings
         self.radius = Decimal(settings.clock_diameter / 2)
         self.padding = Decimal(settings.padding)
         self.hour_point_radius = Decimal(settings.hour_point_radius)
@@ -187,6 +185,7 @@ class Clock:
         self.coordinates = settings.coordinates
         self.backgound_color = settings.backgound_color.value
         self.color = settings.color.value
+        self.font_color = settings.font_color.value
 
         surface = pygame.Surface(get_clock_size(settings))
         self.surface = surface
@@ -197,13 +196,15 @@ class Clock:
 
         # arrows
         self.second_arrow = SecondArrow(
-            surface, self.radius, self.center, self.color, 1
+            surface, self.radius, self.center, settings.second_color.value
         )
         self.minute_arrow = PolygonMinuteArrow(
-            surface, self.radius, self.center, self.color, settings.minute_thickness
+            surface, self.radius, self.center, self.color,
+            settings.minute_thickness
         )
         self.hour_arrow = PolygonHourArrow(
-            surface, self.radius, self.center, self.color, settings.hour_thickness
+            surface, self.radius, self.center, self.color,
+            settings.hour_thickness
         )
 
         # generate face_points for hours and minutes
@@ -223,7 +224,7 @@ class Clock:
             else:
                 hour_flag += 1
 
-    def draw_face(self, pm=False):
+    def draw_face(self, now):
         for point in self.face_points:
             pygame.gfxdraw.filled_circle(
                 self.surface,
@@ -243,15 +244,39 @@ class Clock:
         # text timezone
         city = str(self.timezone).split('/')[-1].replace('_', ' ')
         myfont = pygame.font.SysFont(self.font_family, self.font_size)
-        textsurface = myfont.render(city, True, self.color)
-        position = Point(self.padding / 2, self.padding)
+        textsurface = myfont.render(city, True, self.font_color)
+        width = Decimal(textsurface.get_width())
+        position = Point(
+            int(self.padding + self.radius - width / 2),
+            int(self.padding + self.radius / 3)
+        )
         self.surface.blit(textsurface, position)
 
-        # text timezone
-        textsurface = myfont.render('PM' if pm else 'AM', True, self.color)
+        # AM or PM
+        textsurface = myfont.render(
+            'PM' if now.hour > 11 else 'AM',
+            True,
+            self.font_color
+        )
+        width = Decimal(textsurface.get_width())
         position = Point(
-            int(self.radius * Decimal(1.9)),
-            self.radius * Decimal(1.8)
+            int(self.padding + self.radius - width / 2),
+            int(self.padding + self.radius * 4 / 3)
+        )
+        self.surface.blit(textsurface, position)
+        pm_height = Decimal(textsurface.get_height())
+
+        # date.month
+        myfont = pygame.font.SysFont(self.font_family, int(self.font_size * 3 / 4))
+        textsurface = myfont.render(
+            f'{now:%d.%m %a}',
+            True,
+            self.font_color
+        )
+        width = Decimal(textsurface.get_width())
+        position = Point(
+            int(self.padding + self.radius - width / 2),
+            int(self.padding + self.radius * 4 / 3 + pm_height)
         )
         self.surface.blit(textsurface, position)
 
@@ -265,7 +290,7 @@ class Clock:
     def update(self):
         self.surface.fill(self.backgound_color)
         now = datetime.now(self.timezone)
-        self.draw_face(now.hour > 11)
+        self.draw_face(now)
         self.second_arrow.update(now)
         self.minute_arrow.update(now)
         self.hour_arrow.update(now)
