@@ -8,8 +8,7 @@ import pygame
 import pygame.gfxdraw
 from pytz import timezone
 
-from models import MyColor, Point
-from utils import get_clock_size
+from models import MyColor, Point, TimeZones
 
 
 FacePoint = namedtuple(
@@ -165,7 +164,6 @@ class PolygonMinuteArrow(PolygonArrowMixin, MinuteArrow):
 
 
 class Clock:
-    padding = None
     surface = None
     screen = None
     radius = None
@@ -176,23 +174,27 @@ class Clock:
     def __init__(self, screen, settings):
         self.screen = screen
         self.radius = Decimal(settings.clock_diameter / 2)
-        self.padding = Decimal(settings.padding)
+        self.surface_size = settings.surface_size
         self.hour_point_radius = Decimal(settings.hour_point_radius)
         self.min_point_radius = Decimal(settings.min_point_radius)
         self.font_family = settings.font_family
         self.font_size = settings.font_size
-        self.timezone = timezone(settings.timezone.value)
+        if isinstance(settings.timezone, TimeZones):
+            self.timezone = timezone(settings.timezone.value)
+        else:
+            self.timezone = timezone(settings.timezone)
         self.coordinates = settings.coordinates
         self.backgound_color = settings.backgound_color.value
         self.color = settings.color.value
         self.font_color = settings.font_color.value
 
-        surface = pygame.Surface(get_clock_size(settings))
+        surface = pygame.Surface(self.surface_size)
         self.surface = surface
         width = Decimal(surface.get_width())
         height = Decimal(surface.get_height())
         self.center = Point(width / 2, height / 2)
-        self.start_point = Point(width / 2, self.padding)  # 12:00
+        self.start_point = Point(self.center.x,
+                                 self.center.y - self.radius)  # 12:00
 
         # arrows
         self.second_arrow = SecondArrow(
@@ -247,8 +249,8 @@ class Clock:
         textsurface = myfont.render(city, True, self.font_color)
         width = Decimal(textsurface.get_width())
         position = Point(
-            int(self.padding + self.radius - width / 2),
-            int(self.padding + self.radius / 3)
+            int(self.center.x - width / 2),
+            int(self.center.y - self.radius * 2 / 3)
         )
         self.surface.blit(textsurface, position)
 
@@ -260,8 +262,8 @@ class Clock:
         )
         width = Decimal(textsurface.get_width())
         position = Point(
-            int(self.padding + self.radius - width / 2),
-            int(self.padding + self.radius * 4 / 3)
+            int(self.center.x - width / 2),
+            int(self.center.y + self.radius / 3)
         )
         self.surface.blit(textsurface, position)
         pm_height = Decimal(textsurface.get_height())
@@ -275,8 +277,8 @@ class Clock:
         )
         width = Decimal(textsurface.get_width())
         position = Point(
-            int(self.padding + self.radius - width / 2),
-            int(self.padding + self.radius * 4 / 3 + pm_height)
+            int(self.center.x - width / 2),
+            int(self.center.y + self.radius / 3 + pm_height)
         )
         self.surface.blit(textsurface, position)
 

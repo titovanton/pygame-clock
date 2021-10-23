@@ -1,15 +1,6 @@
 import requests
 from datetime import datetime
 
-from models import Size
-
-
-def get_clock_size(settings):
-    return Size(
-        settings.clock_diameter + settings.padding * 2,
-        settings.clock_diameter + settings.padding * 2,
-    )
-
 
 def less_often_than(seconds):
     """

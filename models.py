@@ -57,11 +57,12 @@ class TimeZones(enum.Enum):
     NEW_YORK = 'America/New_York'
     PARIS = 'Europe/Paris'
     YEKATERINBURG = 'Asia/Yekaterinburg'
+    TOKYO = 'Asia/Tokyo'
 
     CET = 'CET'  # Central Europe Time
     UTC = 'UTC'
 
+    PST = 'PST8PDT'  # USA Pacific Time Zone
+    MST = 'MST'  # USA Mountain Time Zone
     CST = 'CST6CDT'  # USA Central Time Zone
     EST = 'EST'  # USA Eastern Time Zone
-    MST = 'MST'  # USA Mountain Time Zone
-    PST = 'PST8PDT'  # USA Pacific Time Zone
