@@ -48,21 +48,39 @@ class BootstrapColor(enum.Enum):
 class TimeZones(enum.Enum):
     """pytz timezones for easy use"""
 
-    BERLIN = 'Europe/Berlin'
-    COPENHAGEN = 'Europe/Copenhagen'
-    KIEV = 'Europe/Kiev'
-    LONDON = 'Europe/London'
     LOS_ANGELES = 'America/Los_Angeles'
-    MOSCOW = 'Europe/Moscow'
     NEW_YORK = 'America/New_York'
+    LONDON = 'Europe/London'
+    MADRID = 'Europe/Madrid'
     PARIS = 'Europe/Paris'
+    COPENHAGEN = 'Europe/Copenhagen'
+    BERLIN = 'Europe/Berlin'
+    ROME = 'Europe/Rome'
+    WARSAW = 'Europe/Warsaw'
+    ATHENS = 'Europe/Athens'
+    MOSCOW = 'Europe/Moscow'
+    KIEV = 'Europe/Kiev'
+    DUBAI = 'Asia/Dubai'
+    MALDIVES = 'Indian/Maldives'
     YEKATERINBURG = 'Asia/Yekaterinburg'
+    NOVOSIBIRSK = 'Asia/Novosibirsk'
+    BANGKOK = 'Asia/Bangkok'
+    SINGAPORE = 'Singapore'
+    HONGKONG = 'Hongkong'
+    TAIPEI = 'Asia/Taipei'
     TOKYO = 'Asia/Tokyo'
+    VLADIVOSTOK = 'Asia/Vladivostok'
+    CANBERRA = 'Australia/Canberra'
 
-    CET = 'CET'  # Central Europe Time
+    PDT = 'PST8PDT'  # USA Pacific Time Zone
+    MDT = 'MST7MDT'  # USA Mountain Time Zone
+    CDT = 'CST6CDT'  # USA Central Time Zone
+    EDT = 'EST5EDT'  # USA Eastern Time Zone
+
     UTC = 'UTC'
+    GMT = 'GMT'
+    CET = 'CET'  # Central Europe Time
 
-    PST = 'PST8PDT'  # USA Pacific Time Zone
-    MST = 'MST'  # USA Mountain Time Zone
-    CST = 'CST6CDT'  # USA Central Time Zone
-    EST = 'EST'  # USA Eastern Time Zone
+    IST = 'Asia/Kolkata'  # Indian Standard Time Zone
+
+    NEW_ZEALAND = 'NZ'  # New Zealand

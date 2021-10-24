@@ -9,13 +9,14 @@ from settings import SETTINGS
 
 going = True
 pg_clock = pygame.time.Clock()
+tick_times = 100  # 100 times a second
 
 
 async def handle_quit_event():
     global going
 
     while going:
-        pg_clock.tick(60)  # 60 times a second
+        pg_clock.tick(tick_times)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 going = False
@@ -30,7 +31,7 @@ async def game_loop(obj):
     global going
 
     while going:
-        pg_clock.tick(60)  # 60 times a second
+        pg_clock.tick(tick_times)
         obj.update()
         pygame.display.flip()
 
@@ -43,7 +44,7 @@ async def main():
     pygame.font.init()
     settings = Dict2Obj(SETTINGS)
     screen = pygame.display.set_mode(settings.screen_size)
-    pygame.display.set_caption('Clock')
+    pygame.display.set_caption(settings.title)
 
     clocks = [
         Clock(screen, Dict2Obj(cl_setngs))

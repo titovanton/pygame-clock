@@ -179,10 +179,7 @@ class Clock:
         self.min_point_radius = Decimal(settings.min_point_radius)
         self.font_family = settings.font_family
         self.font_size = settings.font_size
-        if isinstance(settings.timezone, TimeZones):
-            self.timezone = timezone(settings.timezone.value)
-        else:
-            self.timezone = timezone(settings.timezone)
+        self.timezone = settings.timezone
         self.coordinates = settings.coordinates
         self.backgound_color = settings.backgound_color.value
         self.color = settings.color.value
@@ -244,7 +241,9 @@ class Clock:
             )
 
         # text timezone
-        city = str(self.timezone).split('/')[-1].replace('_', ' ')
+        city = self.timezone.name
+        if len(city) > 3:
+            city = city.replace('_', ' ').lower().title()
         myfont = pygame.font.SysFont(self.font_family, self.font_size)
         textsurface = myfont.render(city, True, self.font_color)
         width = Decimal(textsurface.get_width())
@@ -291,9 +290,14 @@ class Clock:
 
     def update(self):
         self.surface.fill(self.backgound_color)
-        now = datetime.now(self.timezone)
+        now = datetime.now(self.get_pytz(self.timezone))
         self.draw_face(now)
         self.second_arrow.update(now)
         self.minute_arrow.update(now)
         self.hour_arrow.update(now)
         self.screen.blit(self.surface, self.coordinates)
+
+    def get_pytz(self, tz):
+        if isinstance(tz, TimeZones):
+            return timezone(tz.value)
+        return timezone(tz)
