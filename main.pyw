@@ -47,7 +47,7 @@ async def main():
     pygame.display.set_caption(settings.title)
 
     clocks = [
-        Clock(screen, Dict2Obj(cl_setngs))
+        Clock(screen, Dict2Obj(cl_setngs), settings.upsize)
         for cl_setngs in settings.clocks
     ]
 

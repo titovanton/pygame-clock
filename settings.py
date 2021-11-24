@@ -19,6 +19,7 @@ default_clock = {
     'color': BootstrapColor.WHITE,
     'hour_thickness': 10,
     'minute_thickness': 4,
+    'second_thickness': 1,
     'second_color': BootstrapColor.WHITE,
 }
 
@@ -29,10 +30,11 @@ quarter_clock = {
     'clock_diameter': clock_diameter / 2,
     'surface_size': quarter_surface_size,
     'hour_point_radius': 4,
-    'min_point_radius': 1,
+    'min_point_radius': 1.5,
     'font_size': 17,
     'hour_thickness': 6,
     'minute_thickness': 3,
+    'second_thickness': 1,
 }
 
 default_settings = {
@@ -41,6 +43,7 @@ default_settings = {
         int(default_surface_size.height + quarter_surface_size.height * 2)
     ),
     'title': 'World Wide Time',
+    'upsize': 10
 }
 
 SETTINGS = {

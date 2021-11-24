@@ -9,11 +9,19 @@ Point = namedtuple(
     ['x', 'y'],
     defaults=[0, 0]
 )
-Size = namedtuple(
+_Size = namedtuple(
     'Size',
     ['width', 'height'],
     defaults=[0, 0]
 )
+
+
+class Size(_Size):
+    def upsize(self, factor):
+        return self._replace(**{
+            name: getattr(self, name) * factor
+            for name in self._fields
+        })
 
 
 class Dict2Obj:

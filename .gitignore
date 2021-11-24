@@ -1,3 +1,4 @@
 chimp.py
 data
 __pycache__
+*.pyc

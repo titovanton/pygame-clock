@@ -131,10 +131,10 @@ class PolygonArrowMixin:
         super().__init__(surface, radius, center, color, thickness)
 
         # all coordinates are in S2
-        self.start_left_top = Point(int(-self.thickness / 2), self.len)
-        self.start_right_top = Point(int(self.thickness / 2), self.len)
-        self.start_right_bottom = Point(int(self.thickness / 2), 0)
-        self.start_left_bottom = Point(int(-self.thickness / 2), 0)
+        self.start_left_top = Point(math.floor(-self.thickness / 2), self.len)
+        self.start_right_top = Point(math.floor(self.thickness / 2), self.len)
+        self.start_right_bottom = Point(math.floor(self.thickness / 2), 0)
+        self.start_left_bottom = Point(math.floor(-self.thickness / 2), 0)
 
     def _update(self, angle):
         cur_left_top = self.transform_point(self.start_left_top, angle)
@@ -163,22 +163,28 @@ class PolygonMinuteArrow(PolygonArrowMixin, MinuteArrow):
     thickness = 4
 
 
+class PolygonSecondArrow(PolygonArrowMixin, SecondArrow):
+    thickness = 2
+
+
 class Clock:
     surface = None
     screen = None
     radius = None
+    upsize_factor = None
     face_points = []
     hour_point_radius = None
     min_point_radius = None
 
-    def __init__(self, screen, settings):
+    def __init__(self, screen, settings, upsize_factor):
         self.screen = screen
-        self.radius = Decimal(settings.clock_diameter / 2)
-        self.surface_size = settings.surface_size
-        self.hour_point_radius = Decimal(settings.hour_point_radius)
-        self.min_point_radius = Decimal(settings.min_point_radius)
+        self.radius = Decimal(settings.clock_diameter * upsize_factor / 2)
+        self.origin_surface_size = settings.surface_size
+        self.surface_size = settings.surface_size.upsize(upsize_factor)
+        self.hour_point_radius = Decimal(settings.hour_point_radius * upsize_factor)
+        self.min_point_radius = Decimal(settings.min_point_radius * upsize_factor)
         self.font_family = settings.font_family
-        self.font_size = settings.font_size
+        self.font_size = settings.font_size * upsize_factor
         self.timezone = settings.timezone
         self.coordinates = settings.coordinates
         self.backgound_color = settings.backgound_color.value
@@ -194,16 +200,17 @@ class Clock:
                                  self.center.y - self.radius)  # 12:00
 
         # arrows
-        self.second_arrow = SecondArrow(
-            surface, self.radius, self.center, settings.second_color.value
+        self.second_arrow = PolygonSecondArrow(
+            surface, self.radius, self.center, settings.second_color.value,
+            settings.second_thickness * upsize_factor
         )
         self.minute_arrow = PolygonMinuteArrow(
             surface, self.radius, self.center, self.color,
-            settings.minute_thickness
+            settings.minute_thickness * upsize_factor
         )
         self.hour_arrow = PolygonHourArrow(
             surface, self.radius, self.center, self.color,
-            settings.hour_thickness
+            settings.hour_thickness * upsize_factor
         )
 
         # generate face_points for hours and minutes
@@ -295,7 +302,8 @@ class Clock:
         self.second_arrow.update(now)
         self.minute_arrow.update(now)
         self.hour_arrow.update(now)
-        self.screen.blit(self.surface, self.coordinates)
+        downsized = pygame.transform.smoothscale(self.surface, self.origin_surface_size)
+        self.screen.blit(downsized, self.coordinates)
 
     def get_pytz(self, tz):
         if isinstance(tz, TimeZones):
